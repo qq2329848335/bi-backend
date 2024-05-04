@@ -1,5 +1,8 @@
 package com.yupi.springbootinit.service.impl;
 
+import com.baomidou.mybatisplus.core.toolkit.ExceptionUtils;
+import com.baomidou.mybatisplus.core.toolkit.support.SFunction;
+import com.yupi.springbootinit.exception.BusinessException;
 import com.yupi.springbootinit.model.entity.Chart;
 import com.yupi.springbootinit.mapper.ChartMapper;
 import com.yupi.springbootinit.service.ChartService;
@@ -13,18 +16,20 @@ import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.yupi.springbootinit.common.ErrorCode;
 import com.yupi.springbootinit.exception.ThrowUtils;
 import com.yupi.springbootinit.model.dto.chat.ChartQueryRequest;
-import com.yupi.springbootinit.model.entity.Chart;
-import com.yupi.springbootinit.mapper.ChartMapper;
 import com.yupi.springbootinit.model.vo.ChartVO;
-import com.yupi.springbootinit.service.ChartService;
-import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import org.apache.commons.lang3.StringUtils;
 import org.springframework.beans.BeanUtils;
-import org.springframework.stereotype.Service;
 
+import java.lang.invoke.CallSite;
+import java.lang.invoke.LambdaMetafactory;
+import java.lang.invoke.MethodHandles;
+import java.lang.invoke.MethodType;
+import java.lang.reflect.Field;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.stream.Collectors;
 
 /**
@@ -123,8 +128,113 @@ public class ChartServiceImpl extends ServiceImpl<ChartMapper, Chart> implements
         if (updateTime != null) {
             chartLambdaQueryWrapper.le(Chart::getUpdateTime, updateTime);
         }
+        //根据排序方式排序
+        String sortOrder = chartQueryRequest.getSortOrder();
+        if (StringUtils.isNotBlank(sortOrder)){
+            //是否有排序字段
+            String sortField = chartQueryRequest.getSortField();
+            if (StringUtils.isNotBlank(sortField)){
+                //获取与实体类字段名对应的 SFunction 对象。
+                SFunction sFunction = getSFunction(Chart.class, sortField);
+
+                //判断排序方式
+                if (sortOrder.equals("asc")){
+                    chartLambdaQueryWrapper.orderByAsc(sFunction);
+                }else if (sortOrder.equals("desc")){
+                    chartLambdaQueryWrapper.orderByDesc(sFunction);
+                }else {
+                    throw new BusinessException(ErrorCode.PARAMS_ERROR,"排序方式错误");
+                }
+            }
+
+        }
+
+
         return chartLambdaQueryWrapper;
     }
+
+
+    // 定义一个标志常量，用于序列化。在 LambdaMetafactory 中使用，
+    // 以指示生成的 lambda 表达式应该是可序列化的。
+    private static final int FLAG_SERIALIZABLE = 1;
+
+    // 使用 HashMap 缓存 SFunction 对象，以避免重复创建。
+    private static Map<String, SFunction> functionMap = new HashMap<>();
+
+    /**
+     * 获取与实体类字段对应的 SFunction 对象。
+     * @param entityClass 实体类的 Class 对象。
+     * @param fieldName 实体类中的字段名。
+     * @return 返回找到的 SFunction 对象。
+     */
+    public static SFunction getSFunction(Class<?> entityClass, String fieldName) {
+        // 检查缓存中是否已经有了对应的 SFunction 对象。
+        if (functionMap.containsKey(entityClass.getName() + fieldName)) {
+            return functionMap.get(entityClass.getName() + fieldName);
+        }
+        // 获取实体类中名为 fieldName 的字段。
+        Field field = getDeclaredField(entityClass, fieldName);
+        if (field == null) {
+            //如果字段不存在，使用 ExceptionUtils 抛出一个异常，指出实体类中没有找到该字段。
+            throw ExceptionUtils.mpe("This class %s is not have field %s ", entityClass.getName(), fieldName);
+        }
+        SFunction func = null;
+        // 获取 MethodHandles.Lookup 实例，用于反射操作。
+        final MethodHandles.Lookup lookup = MethodHandles.lookup();
+        // 定义方法类型，表示实体类的实例方法，该方法返回字段的类型。
+        MethodType methodType = MethodType.methodType(field.getType(), entityClass);
+        // 用于存储 LambdaMetafactory 创建的 CallSite 对象。
+        final CallSite site;
+        // 构造标准的 Java getter 方法名。
+        String getFunName = "get" + fieldName.substring(0, 1).toUpperCase() + fieldName.substring(1);
+        try {
+            // 使用 LambdaMetafactory 创建一个动态的 SFunction 实例。
+            site = LambdaMetafactory.altMetafactory(
+                    lookup,
+                    "invoke",
+                    MethodType.methodType(SFunction.class),
+                    methodType,
+                    lookup.findVirtual(entityClass, getFunName, MethodType.methodType(field.getType())),
+                    methodType,
+                    FLAG_SERIALIZABLE
+            );
+            // 使用 CallSite 来获取 SFunction 实例。
+            func = (SFunction) site.getTarget().invokeExact();
+            // 将生成的 SFunction 实例存储到缓存中。
+            functionMap.put(entityClass.getName() + field.getName(), func);
+            return func;
+        } catch (Throwable e) {
+            // 如果在创建 SFunction 过程中发生异常，抛出异常，指出实体类中没有找到对应的 getter 方法。
+            throw ExceptionUtils.mpe("This class %s is not have method %s ", entityClass.getName(), getFunName);
+        }
+    }
+
+    /**
+     * 递归获取类中声明的字段，包括私有字段。
+     * @param clazz 要检查的类。
+     * @param fieldName 要查找的字段名。
+     * @return 返回找到的 Field 对象，如果没有找到则返回 null。
+     */
+    public static Field getDeclaredField(Class<?> clazz, String fieldName) {
+        Field field = null;
+        // 遍历类及其父类，直到到达 Object 类。
+        for (; clazz != Object.class; clazz = clazz.getSuperclass()) {
+            try {
+                // 尝试获取声明的字段。
+                field = clazz.getDeclaredField(fieldName);
+                // 如果找到字段，返回该字段。
+                return field;
+            } catch (NoSuchFieldException e) {
+                // 如果没有找到字段，继续查找父类。
+                // 这里不处理异常，让其继续执行循环。
+            }
+        }
+        // 如果没有找到字段，返回 null。
+        return null;
+    }
+
+
+
 
     @Override
     public Page<Chart> listChartByPage(ChartQueryRequest chartQueryRequest) {

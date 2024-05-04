@@ -64,6 +64,7 @@ public class ChartController {
 
     /**
      * 智能分析同步
+     *
      * @param multipartFile
      * @param genChartByAiRequest
      * @param request
@@ -129,18 +130,14 @@ public class ChartController {
             throw new BusinessException(ErrorCode.SYSTEM_ERROR, "数据库异常，保存图表失败");
         }
         //返回数据给前端
-        ChartVO chartVO = new ChartVO();
-        chartVO.setGenChart(genChart);
-        chartVO.setGenResult(genResult);
-        chartVO.setName(name);
-        chartVO.setId(chart.getId());
-
+        ChartVO chartVO = chartService.getChartVO(chart);
         return ResultUtils.success(chartVO);
     }
 
 
     /**
      * 智能分析异步
+     *
      * @param multipartFile
      * @param genChartByAiRequest
      * @param request
@@ -243,6 +240,7 @@ public class ChartController {
     /**
      * 处理更新图表状态失败
      * 时间点 30 12:00
+     *
      * @param chartId
      * @param execMessage
      */
