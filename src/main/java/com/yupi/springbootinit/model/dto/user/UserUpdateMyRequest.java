@@ -6,8 +6,7 @@ import lombok.Data;
 /**
  * 用户更新个人信息请求
  *
- * @author <a href="https://github.com/liyupi">程序员鱼皮</a>
- * @from <a href="https://yupi.icu">编程导航知识星球</a>
+ * @author 加棉
  */
 @Data
 public class UserUpdateMyRequest implements Serializable {
@@ -26,6 +25,21 @@ public class UserUpdateMyRequest implements Serializable {
      * 简介
      */
     private String userProfile;
+
+    /**
+     * 用户原密码
+     */
+    private String userPassword;
+
+    /**
+     * 修改密码时,第一次输入的密码
+     */
+    private String newPassword;
+
+    /**
+     * 修改密码时,第二次输入的密码
+     */
+    private String checkPassword;
 
     private static final long serialVersionUID = 1L;
 }

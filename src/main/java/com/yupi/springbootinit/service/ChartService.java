@@ -27,5 +27,7 @@ public interface ChartService extends IService<Chart> {
 
     LambdaQueryWrapper<Chart> getLambdaQueryWrapper(ChartQueryRequest chartQueryRequest);
 
+    void handleChartUpdateError(long chartId, String execMessage);
+
     Page<Chart> listChartByPage(ChartQueryRequest chartQueryRequest);
 }

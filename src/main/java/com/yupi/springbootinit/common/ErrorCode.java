@@ -3,8 +3,7 @@ package com.yupi.springbootinit.common;
 /**
  * 自定义错误码
  *
- * @author <a href="https://github.com/liyupi">程序员鱼皮</a>
- * @from <a href="https://yupi.icu">编程导航知识星球</a>
+ * @author 加棉
  */
 public enum ErrorCode {
 
@@ -16,7 +15,8 @@ public enum ErrorCode {
     TOO_MANY_REQUEST(42900, "请求过于频繁"),
     FORBIDDEN_ERROR(40300, "禁止访问"),
     SYSTEM_ERROR(50000, "系统内部异常"),
-    OPERATION_ERROR(50001, "操作失败");
+    OPERATION_ERROR(50001, "操作失败"),
+    NO_REMINDER_ERROR(40102, "今日AI调用次数已用完");
 
     /**
      * 状态码

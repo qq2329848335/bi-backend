@@ -144,6 +144,8 @@ public class UserController {
         return ResultUtils.success(result);
     }
 
+
+
     /**
      * 获取当前登录用户
      *
@@ -313,9 +315,24 @@ public class UserController {
             throw new BusinessException(ErrorCode.PARAMS_ERROR);
         }
         User loginUser = userService.getLoginUser(request);
+        //判断是否要修改密码
+        String inputUserPassword = userUpdateMyRequest.getUserPassword();
+        String newPassword = userUpdateMyRequest.getNewPassword();
+        if(inputUserPassword!=null){
+            String checkPassword = userUpdateMyRequest.getCheckPassword();
+            String userPassword = loginUser.getUserPassword();
+            if (!userPassword.equals(userService.getEncryptUserPassword(inputUserPassword))){
+                throw new BusinessException(ErrorCode.PARAMS_ERROR,"原密码错误！");
+            }
+            //判断两次密码是否一致
+            if (!newPassword.equals(checkPassword)){
+                throw new BusinessException(ErrorCode.PARAMS_ERROR,"两次密码不一致!");
+            }
+        }
         User user = new User();
         BeanUtils.copyProperties(userUpdateMyRequest, user);
         user.setId(loginUser.getId());
+        user.setUserPassword(userService.getEncryptUserPassword(newPassword));
         boolean result = userService.updateById(user);
         ThrowUtils.throwIf(!result, ErrorCode.OPERATION_ERROR);
         return ResultUtils.success(true);

@@ -4,7 +4,6 @@ yuapi:
   client:
     access-key: 5paxrlrrf5cdpjo5gfbttfgvizn4izof
     secret-key: z16ylsid03nz6su4vi4gclbzdog8jt9m
-    bi-model-id: 1660834921666576386
 spring:
   application:
     name: bi-backend
@@ -20,6 +19,12 @@ spring:
     host: 192.168.88.188
     port: 6379
     database: 0
+  # RabbitMQ 配置
+  rabbitmq:
+    host: localhost
+    port: 5672
+    username: guest
+    password: guest
   # session 配置
   session:
     # todo 取消注释开启分布式 session（须先配置 Redis）

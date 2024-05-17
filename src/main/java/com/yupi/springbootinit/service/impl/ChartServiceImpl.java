@@ -2,6 +2,7 @@ package com.yupi.springbootinit.service.impl;
 
 import com.baomidou.mybatisplus.core.toolkit.ExceptionUtils;
 import com.baomidou.mybatisplus.core.toolkit.support.SFunction;
+import com.yupi.springbootinit.constant.ChartConstant;
 import com.yupi.springbootinit.exception.BusinessException;
 import com.yupi.springbootinit.model.entity.Chart;
 import com.yupi.springbootinit.mapper.ChartMapper;
@@ -231,6 +232,27 @@ public class ChartServiceImpl extends ServiceImpl<ChartMapper, Chart> implements
         }
         // 如果没有找到字段，返回 null。
         return null;
+    }
+
+
+
+    /**
+     * 处理更新图表状态失败
+     * 时间点 30 12:00
+     *
+     * @param chartId
+     * @param execMessage
+     */
+    @Override
+    public void handleChartUpdateError(long chartId, String execMessage) {
+        Chart updataChart = new Chart();
+        updataChart.setId(chartId);
+        updataChart.setStatus(ChartConstant.CHART_STATUS_FAILED);
+        updataChart.setExecMessage(execMessage);
+        boolean b = this.updateById(updataChart);
+        if (!b) {
+            log.error("更新图表失败" + chartId + ",执行信息:" + execMessage);
+        }
     }
 
 

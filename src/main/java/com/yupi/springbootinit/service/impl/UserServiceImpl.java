@@ -8,6 +8,7 @@ import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.yupi.springbootinit.common.ErrorCode;
 import com.yupi.springbootinit.constant.CommonConstant;
 import com.yupi.springbootinit.exception.BusinessException;
+import com.yupi.springbootinit.exception.ThrowUtils;
 import com.yupi.springbootinit.mapper.UserMapper;
 import com.yupi.springbootinit.model.dto.user.UserQueryRequest;
 import com.yupi.springbootinit.model.entity.User;
@@ -16,10 +17,12 @@ import com.yupi.springbootinit.model.vo.LoginUserVO;
 import com.yupi.springbootinit.model.vo.UserVO;
 import com.yupi.springbootinit.service.UserService;
 import com.yupi.springbootinit.utils.SqlUtils;
+
 import java.util.ArrayList;
 import java.util.List;
 import java.util.stream.Collectors;
 import javax.servlet.http.HttpServletRequest;
+
 import lombok.extern.slf4j.Slf4j;
 import me.chanjar.weixin.common.bean.WxOAuth2UserInfo;
 import org.apache.commons.lang3.StringUtils;
@@ -29,7 +32,6 @@ import org.springframework.util.DigestUtils;
 
 /**
  * 用户服务实现
- *
  */
 @Service
 @Slf4j
@@ -41,7 +43,7 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User> implements Us
     public static final String SALT = "yupi";
 
     @Override
-    public long userRegister(String userAccount, String userPassword, String checkPassword,String userName) {
+    public long userRegister(String userAccount, String userPassword, String checkPassword, String userName) {
         // 1. 校验
         if (StringUtils.isAnyBlank(userAccount, userPassword, checkPassword)) {
             throw new BusinessException(ErrorCode.PARAMS_ERROR, "参数为空");
@@ -64,8 +66,9 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User> implements Us
             if (count > 0) {
                 throw new BusinessException(ErrorCode.PARAMS_ERROR, "账号重复");
             }
+
             // 2. 加密
-            String encryptPassword = DigestUtils.md5DigestAsHex((SALT + userPassword).getBytes());
+            String encryptPassword = getEncryptUserPassword(userPassword);
             // 3. 插入数据
             User user = new User();
             user.setUserAccount(userAccount);
@@ -77,6 +80,12 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User> implements Us
             }
             return user.getId();
         }
+    }
+
+    @Override
+    public String getEncryptUserPassword(String userPassword) {
+        // 2. 加密
+        return DigestUtils.md5DigestAsHex((SALT + userPassword).getBytes());
     }
 
     @Override
@@ -265,5 +274,44 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User> implements Us
         queryWrapper.orderBy(SqlUtils.validSortField(sortField), sortOrder.equals(CommonConstant.SORT_ORDER_ASC),
                 sortField);
         return queryWrapper;
+    }
+
+    /**
+     * 添加用户调用AI的剩余次数 +1
+     *
+     * @param userId
+     * @return
+     */
+    @Override
+    public boolean updateUserRemainderNum(Long userId) {
+        ThrowUtils.throwIf(userId == null, ErrorCode.PARAMS_ERROR, "userId不能为空");
+        //给RemainderNum加1
+        User user = this.getById(userId);
+        if (user != null) {
+            user.setRemainderNum(user.getRemainderNum() + 1);
+            return this.updateById(user);
+        }
+        return false;
+    }
+
+
+    /**
+     * 添加/减少用户调用AI的剩余次数
+     *
+     * @param userId
+     * @return
+     */
+    @Override
+    public void updateUserRemainderNum(Long userId, int num) {
+        ThrowUtils.throwIf(userId == null, ErrorCode.PARAMS_ERROR, "userId不能为空");
+
+        //判断用户是否存在
+        User user = this.getById(userId);
+        ThrowUtils.throwIf(user == null, ErrorCode.PARAMS_ERROR, "用户不存在");
+
+        //给RemainderNum加1
+        user.setRemainderNum(user.getRemainderNum() + num);
+        boolean b = this.updateById(user);
+        ThrowUtils.throwIf(!b, ErrorCode.OPERATION_ERROR, "更新失败");
     }
 }

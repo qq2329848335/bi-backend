@@ -57,6 +57,11 @@ public class User implements Serializable {
     private String userRole;
 
     /**
+     * 今日剩余调用次数
+     */
+    private Integer remainderNum;
+
+    /**
      * 创建时间
      */
     private LocalDateTime createTime;

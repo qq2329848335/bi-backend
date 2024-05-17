@@ -31,6 +31,13 @@ public interface UserService extends IService<User> {
     long userRegister(String userAccount, String userPassword, String checkPassword,String userName);
 
     /**
+     * 对密码加密
+     * @param userPassword
+     * @return
+     */
+    String getEncryptUserPassword(String userPassword);
+
+    /**
      * 用户登录
      *
      * @param userAccount  用户账户
@@ -120,4 +127,8 @@ public interface UserService extends IService<User> {
      */
     QueryWrapper<User> getQueryWrapper(UserQueryRequest userQueryRequest);
 
+
+    boolean updateUserRemainderNum(Long userId);
+
+    void updateUserRemainderNum(Long userId, int num);
 }
